@@ -1,0 +1,22 @@
+version: "3.8"
+
+services:
+  portainer:
+    image: portainer/portainer-ce:latest
+    container_name: "portainer"
+    restart: always
+    networks:
+      - web
+    volumes:
+      - ./data/:/data
+      - /var/run/docker.sock:/var/run/docker.sock
+    labels:
+      - "traefik.enable=true"
+      # On utilise .localhost pour que ça marche direct sur votre PC
+      - "traefik.http.routers.portainer.rule=Host(`portainer.localhost`)"
+      - "traefik.http.routers.portainer.entrypoints=web"
+      - "traefik.http.services.portainer.loadbalancer.server.port=9000"
+
+networks:
+  web:
+    external: true # Indique que ce réseau est créé par Traefik

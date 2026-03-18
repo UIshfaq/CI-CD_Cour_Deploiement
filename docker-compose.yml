@@ -1,0 +1,65 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: app_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: password123
+      POSTGRES_DB: app_db
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - app-network
+
+  backend:
+    build:
+      context: ./backend
+    container_name: app_backend
+    restart: always
+    environment:
+      - PORT=3000
+      - DATABASE_URL=postgres://admin:password123@db:5432/app_db
+    depends_on:
+      - db
+    networks:
+      - app-network
+      - web # On connecte le backend à Traefik
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.backend.rule=Host(`api.app.mon-projet.com`)"
+      - "traefik.http.routers.backend.entrypoints=web"
+      - "traefik.http.services.backend.loadbalancer.server.port=3000"
+      - "traefik.docker.network=web"
+
+  frontend:
+    build:
+      context: ./frontend
+    container_name: app_frontend
+    restart: always
+    environment:
+      # Le frontend va maintenant chercher l'API via la nouvelle URL Traefik
+      - VITE_API_URL=http://api.app.localhost
+    depends_on:
+      - backend
+    networks:
+      - web # On connecte le frontend à Traefik
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.frontend.rule=Host(`app.mon-projet.com`)"
+      - "traefik.http.routers.frontend.entrypoints=web"
+      - "traefik.http.services.frontend.loadbalancer.server.port=5173"
+      - "traefik.docker.network=web"
+
+volumes:
+  pgdata:
+
+networks:
+  app-network:
+    driver: bridge
+  web:
+    external: true
+    name: web
