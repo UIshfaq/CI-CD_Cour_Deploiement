@@ -36,3 +36,5 @@ yarn-error.log*
 # --- OS spécifiques ---
 Thumbs.db
 desktop.ini
+
+data/
